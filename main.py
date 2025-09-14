@@ -12,7 +12,7 @@ def add_glossy_highlight(img, intensity=0.25):
         draw.line([(0,i),(w,i)], fill=(255,255,255,alpha))
     return Image.alpha_composite(img, gloss)
 
-def process_image(input_path, output_path, output_size=(1200,1200), alpha_threshold=80):
+def process_image(input_path, output_path, output_size=(1200,1200), alpha_threshold=80, padding_ratio=0.05):
     # Обрезка
     img = Image.open(input_path).convert("RGBA")
     session = new_session("u2net")
@@ -28,11 +28,13 @@ def process_image(input_path, output_path, output_size=(1200,1200), alpha_thresh
     min_y, max_y = ys.min(), ys.max()
     obj_crop = obj.crop((min_x, min_y, max_x+1, max_y+1))
 
-    # Масштабирование
+    # Масштабирование с отступами
     obj_w, obj_h = obj_crop.size
-    scale = min(output_size[0]/obj_w, output_size[1]/obj_h)
-    new_w, new_h = int(obj_w*scale), int(obj_h*scale)
-    obj_resized = obj_crop.resize((new_w,new_h), Image.Resampling.LANCZOS)
+    max_w = output_size[0] * (1 - 2 * padding_ratio)
+    max_h = output_size[1] * (1 - 2 * padding_ratio)
+    scale = min(max_w / obj_w, max_h / obj_h)
+    new_w, new_h = int(obj_w * scale), int(obj_h * scale)
+    obj_resized = obj_crop.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
     # Удаление окантовки
     arr = np.array(obj_resized).astype(np.float32)
@@ -49,11 +51,11 @@ def process_image(input_path, output_path, output_size=(1200,1200), alpha_thresh
     # Эффект глянца
     obj_resized = add_glossy_highlight(obj_resized, intensity=0.3)
 
-    # Центрирование
+    # Центрирование с отступами
     bg = Image.new("RGBA", output_size, (255,255,255,255))
-    start_x = (output_size[0]-obj_resized.size[0])//2
-    start_y = (output_size[1]-obj_resized.size[1])//2
-    bg.paste(obj_resized, (start_x,start_y), mask=obj_resized.split()[3])
+    start_x = (output_size[0] - obj_resized.size[0]) // 2
+    start_y = (output_size[1] - obj_resized.size[1]) // 2
+    bg.paste(obj_resized, (start_x, start_y), mask=obj_resized.split()[3])
 
     # Сохранение
     bg.convert("RGB").save(output_path, "JPEG", quality=95)
