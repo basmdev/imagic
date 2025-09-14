@@ -15,6 +15,7 @@ def add_glossy_highlight(img, intensity=0.25):
 def process_image(input_path, output_path, output_size=(1200,1200), alpha_threshold=80, padding_ratio=0.05):
     # Обрезка
     img = Image.open(input_path).convert("RGBA")
+    img = img.rotate(-90, expand=True) # Поворачиваем фото
     session = new_session("u2net")
     obj = remove(img, session=session)
 
